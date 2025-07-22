@@ -2,8 +2,8 @@ const transbankService = require('../services/transbankService');
 
 const CONFIG = {
     MAX_PORT_ATTEMPTS: 3,
-    PORT_RETRY_DELAY: 2000,
-    MAX_KEY_ATTEMPTS: 3,
+    PORT_RETRY_DELAY: 5000,
+    MAX_KEY_ATTEMPTS: 5,
     KEY_RETRY_DELAY: 3000,
     MONITOR_INTERVAL: 10000,
     RECONNECT_DELAY: 10000

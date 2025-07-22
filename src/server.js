@@ -39,8 +39,8 @@ async function startPOSConnection() {
         connectionMonitor.start();
     } else {
         console.error(`[POS] Error: ${result.reason}`);
-        console.log('[POS] Reintentando en 30 segundos...');
-        setTimeout(startPOSConnection, 30000);
+        console.log('[POS] Reintentando en 10 segundos...');
+        setTimeout(startPOSConnection, 10000);
     }
 }
 
