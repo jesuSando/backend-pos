@@ -126,7 +126,7 @@ const POSController = {
       const alive = await transbankService.isAlive();
       return responseHandler.success(res, 'Estado del POS', {
         alive,
-        port: transbankService.connection?.path || null
+        port: transbankService.connection && transbankService.connection.path
       });
     } catch (error) {
       console.error('Error en poll:', error);
