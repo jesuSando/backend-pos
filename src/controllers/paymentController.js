@@ -1,93 +1,104 @@
-var transbankService = require('../services/transbankService');
-var responseHandler = require('../utils/responseHandler');
+const transbankService = require('../services/transbankService');
+const responseHandler = require('../utils/responseHandler');
 
-exports.processPayment = async function (req, res) {
-    try {
-        var amount = req.body.amount;
-        var ticketNumber = req.body.ticketNumber;
+const PaymentController = {
 
-        if (!amount || isNaN(amount) || amount <= 0) {
-            throw new Error('Monto inválido');
+    processPayment: async (req, res) => {
+        try {
+            const { amount, ticketNumber } = req.body;
+
+            if (!amount || isNaN(amount) || amount <= 0) {
+                return responseHandler.error(res, 'Monto inválido', 400, 'INVALID_AMOUNT');
+            }
+
+            if (!ticketNumber || typeof ticketNumber !== 'string') {
+                return responseHandler.error(res, 'Número de ticket/boleta inválido', 400, 'INVALID_TICKET');
+            }
+
+            const response = await transbankService.sale(amount, ticketNumber);
+            const data = response.data;
+
+            // Formatear respuesta
+            const formattedResponse = {
+                approved: data.successful,
+                operationId: data.operationNumber,
+                amount: data.amount,
+                cardNumber: data.last4Digits ? `••••${data.last4Digits}` : null,
+                authorizationCode: data.authorizationCode,
+                timestamp: new Date().toISOString(),
+                cardType: data.cardType,
+                cardBrand: data.cardBrand
+            };
+
+            return responseHandler.success(res, 'Pago procesado', formattedResponse);
+        } catch (error) {
+            console.error('Error procesando pago:', error);
+
+            // Manejo especial de errores conocidos
+            const message = (error.message || '').toLowerCase();
+            const isUserCancelled = message.includes('cancelada') || message.includes('cancelado');
+            const isPosDisconnected = message.includes('no se pudo conectar') ||
+                message.includes('pos no conectado') ||
+                message.includes('pos desconectado');
+
+            const statusCode = isUserCancelled || isPosDisconnected ? 400 : 500;
+            const errorCode = isUserCancelled ? 'USER_CANCELLED' :
+                isPosDisconnected ? 'POS_DISCONNECTED' :
+                    (error.responseCode || 'PAYMENT_ERROR');
+
+            const userMessage = isUserCancelled ? 'Transacción cancelada por el usuario' :
+                isPosDisconnected ? 'El POS no está conectado' :
+                    'Error al procesar el pago';
+
+            return responseHandler.error(res, userMessage, statusCode, errorCode, {
+                detail: error.message
+            });
         }
+    },
 
-        if (!ticketNumber || typeof ticketNumber !== 'string') {
-            throw new Error('Número de ticket/boleta inválido');
+    processRefund: async (req, res) => {
+        try {
+            const { amount, originalOperationNumber } = req.body;
+
+            if (!amount || isNaN(amount) || amount <= 0) {
+                return responseHandler.error(res, 'Monto inválido', 400, 'INVALID_AMOUNT');
+            }
+
+            if (!originalOperationNumber) {
+                return responseHandler.error(res, 'Número de operación original requerido', 400, 'MISSING_ORIGINAL_OPERATION');
+            }
+
+            const response = await transbankService.refund(originalOperationNumber);
+            const data = response.data;
+
+            // Formatear respuesta
+            const formattedResponse = {
+                success: data.successful,
+                operationId: data.operationNumber,
+                amount: data.amount,
+                originalOperation: originalOperationNumber,
+                timestamp: new Date().toISOString(),
+                authorizationCode: data.authorizationCode
+            };
+
+            return responseHandler.success(res, 'Reversa exitosa', formattedResponse);
+        } catch (error) {
+            console.error('Error procesando reversa:', error);
+            return responseHandler.error(res, error.message, 500, error.responseCode || 'REFUND_ERROR', {
+                detail: error.message
+            });
         }
+    },
 
-        var response = await transbankService.sale(amount, ticketNumber);
-        var data = response.data;
-
-        var formattedResponse = {
-            approved: data.successful,
-            operationId: data.operationNumber,
-            amount: data.amount,
-            cardNumber: data.last4Digits ? '••••' + data.last4Digits : null,
-            authorizationCode: data.authorizationCode,
-            timestamp: new Date().toISOString()
-        };
-
-        responseHandler.success(res, 'Pago procesado', formattedResponse);
-    } catch (error) {
-        var message = (error.message || '').toLowerCase();
-        var isUserCancelled = message.indexOf('cancelada') !== -1 || message.indexOf('cancelado') !== -1;
-        var isPosDisconnected = message.indexOf('no se pudo conectar') !== -1 ||
-            message.indexOf('pos no conectado') !== -1 ||
-            message.indexOf('pos desconectado') !== -1;
-
-        var statusCode = (isUserCancelled || isPosDisconnected) ? 400 : 500;
-        var errorCode = isUserCancelled ? 'USER_CANCELLED'
-            : isPosDisconnected ? 'POS_DISCONNECTED'
-                : (error.responseCode || 'UNKNOWN');
-
-        var userMessage = isUserCancelled
-            ? 'Transacción cancelada por el usuario'
-            : isPosDisconnected
-                ? 'El POS no está conectado'
-                : 'Error al procesar el pago';
-
-        responseHandler.error(res, userMessage, statusCode, errorCode, {
-            detail: error.message
-        });
+    getTxStatus: async (req, res) => {
+        try {
+            const response = await transbankService.getTxStatus();
+            return responseHandler.success(res, 'Estado de transacción', response.data);
+        } catch (error) {
+            console.error('Error obteniendo estado de transacción:', error);
+            return responseHandler.error(res, error.message, 500, 'TX_STATUS_ERROR');
+        }
     }
 };
 
-exports.processRefund = async function (req, res) {
-    try {
-        var amount = req.body.amount;
-        var originalOperationNumber = req.body.originalOperationNumber;
-
-        if (!amount || isNaN(amount) || amount <= 0) {
-            return responseHandler.error(res, 'Monto inválido', 400, 'INVALID_AMOUNT');
-        }
-
-        if (!originalOperationNumber) {
-            return responseHandler.error(res, 'Número de operación original requerido', 400, 'MISSING_ORIGINAL_OPERATION');
-        }
-
-        var response = await transbankService.refund(originalOperationNumber);
-        var data = response.data;
-
-        var formattedResponse = {
-            success: data.successful,
-            operationId: data.operationNumber,
-            amount: data.amount,
-            originalOperation: originalOperationNumber,
-            timestamp: new Date().toISOString()
-        };
-
-        responseHandler.success(res, 'Reversa exitosa', formattedResponse);
-    } catch (error) {
-        responseHandler.error(res, error.message, 500, error.responseCode || 'UNKNOWN', {
-            detail: error.message
-        });
-    }
-};
-
-exports.getTxStatus = async function (req, res) {
-    try {
-        var response = await transbankService.getTxStatus();
-        responseHandler.success(res, 'Estado de transacción', response.data);
-    } catch (error) {
-        responseHandler.error(res, error.message, 500, 'TX_STATUS_ERROR');
-    }
-};
+module.exports = PaymentController;
