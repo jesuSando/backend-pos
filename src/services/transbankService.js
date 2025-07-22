@@ -8,12 +8,15 @@ class TransbankService {
         this.pos.setDebug(false);
         this.operationQueue = [];
         this.isProcessing = false;
+        this.inTransaction = false;
     }
 
     async enqueueOperation(operation) {
         return new Promise((resolve, reject) => {
             this.operationQueue.push({ operation, resolve, reject });
-            if (!this.isProcessing) this.processQueue();
+            if (this.isProcessing) return;
+            this.isProcessing = true;
+            this.processQueue();
         });
     }
 
@@ -32,7 +35,7 @@ class TransbankService {
         } catch (error) {
             reject(error);
         } finally {
-            this.processQueue();
+            setTimeout(() => this.processQueue(), 0); 
         }
     }
 
@@ -45,30 +48,18 @@ class TransbankService {
     }
 
     async isAlive() {
+        if (!this.deviceConnected || !this.pos.isConnected()) return false;
+
+        if (this.inTransaction) return true;
+
         try {
-            if (!this.deviceConnected || !this.pos.isConnected()) {
-                return false;
-            }
-
-            const result = await this.pos.poll();
-
-            if (result === undefined) {
-                throw new Error('Respuesta indefinida del POS');
-            }
-
+            await this.pos.status();
             return true;
         } catch (e) {
-            console.error('[POS] Error en isAlive:', e.message || e);
-            if (
-                typeof e.message === 'string' &&
-                (e.message.includes('desconectado') || e.message.includes('no conectado'))
-            ) {
-                return false;
-            }
-            return true;
+            console.error('[POS] Error comprobando conexión:', e.message);
+            return false;
         }
     }
-
 
     async listAvailablePorts() {
         try {
@@ -193,6 +184,7 @@ class TransbankService {
     }
 
     async _sale(amount, ticket, sendStatus = false, callback = null) {
+        this.inTransaction = true;
         try {
             if (!this.connectedPort) {
                 throw new Error('POS no conectado');
@@ -214,6 +206,8 @@ class TransbankService {
                     typeof error.message === 'string' &&
                     error.message.includes('desconectado')
             };
+        } finally {
+            this.inTransaction = false;
         }
     }
 
