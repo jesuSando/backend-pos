@@ -26,11 +26,13 @@ class TransbankService {
             }
             return true;
         } catch (e) {
-            console.error("Error verificando estado del POS:", e.message || 'Error en comunicación con POS');
+            const msg = (e && e.message) ? e.message.toLowerCase() : '';
+            console.error("Error verificando estado del POS:", msg || 'Error en comunicación con POS');
 
-            if (e.message.includes('desconectado') || e.message.includes('no conectado')) {
+            if (msg.includes('desconectado') || msg.includes('no conectado')) {
                 return false;
             }
+
             return true;
         }
     }
