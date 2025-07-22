@@ -17,25 +17,30 @@ class TransbankService {
     }
 
     async isAlive() {
-        if (!this.connectedPort) return false;
-
         try {
+            if (!this.deviceConnected || !this.pos.isConnected()) {
+                return false;
+            }
+    
             const result = await this.pos.poll();
+    
             if (result === undefined) {
                 throw new Error('Respuesta indefinida del POS');
             }
+    
             return true;
         } catch (e) {
-            const msg = (e && e.message) ? e.message.toLowerCase() : '';
-            console.error("Error verificando estado del POS:", msg || 'Error en comunicación con POS');
-
-            if (msg.includes('desconectado') || msg.includes('no conectado')) {
+            console.error('[POS] Error en isAlive:', e.message || e);
+            if (
+                typeof e.message === 'string' &&
+                (e.message.includes('desconectado') || e.message.includes('no conectado'))
+            ) {
                 return false;
             }
-
             return true;
         }
     }
+    
 
     async listAvailablePorts() {
         try {
