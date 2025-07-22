@@ -1,132 +1,384 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tester POS Transbank</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 30px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
         }
-
-        button {
-            margin: 6px;
-            padding: 10px 16px;
-            cursor: pointer;
+        
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
         }
-
-        pre {
-            background: #f0f0f0;
-            padding: 10px;
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+        
+        .panel h2 {
+            margin-top: 0;
+            color: #3498db;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+        
+        .api-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f9f9f9;
             border-radius: 5px;
-            max-height: 300px;
-            overflow-y: auto;
-            white-space: pre-wrap;
+            border-left: 4px solid #3498db;
         }
-
-        .warning {
-            background: #fff3cd;
-            border-left: 6px solid #ffc107;
-            padding: 10px;
-            margin-top: 10px;
+        
+        .api-section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+        
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        .danger {
+            background-color: #e74c3c;
+        }
+        
+        .danger:hover {
+            background-color: #c0392b;
+        }
+        
+        .success {
+            background-color: #2ecc71;
+        }
+        
+        .success:hover {
+            background-color: #27ae60;
+        }
+        
+        .input-group {
+            margin-bottom: 10px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        #response {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            min-height: 200px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        
+        .status-connected {
+            background-color: #2ecc71;
+        }
+        
+        .status-disconnected {
+            background-color: #e74c3c;
+        }
+        
+        .status-unknown {
+            background-color: #f39c12;
+        }
+        
+        .transaction-form {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .transaction-form {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
-
 <body>
-
     <h1>Tester POS Transbank</h1>
-
-    <button onclick="fetchData('/api/status')">Estado</button>
-    <button onclick="fetchData('/api/ports')">Listar Puertos</button>
-    <button onclick="connectPort()">Conectar Puerto</button>
-    <button onclick="fetchPost('/api/disconnect')">Desconectar</button>
-    <button onclick="fetchPost('/api/loadKeys')">Cargar Llaves</button>
-    <button onclick="fetchData('/api/poll')">Poll</button>
-    <button onclick="venta()">Venta ($1000)</button>
-    <button onclick="reverso()">Reversar Última</button>
-    <button onclick="fetchData('/api/last-sale')">Última Venta</button>
-    <button onclick="fetchPost('/api/close-day')">Cierre de Día</button>
-
-    <hr>
-
-    <h3>Resultado:</h3>
-    <pre id="output">Presiona un botón para ver la respuesta...</pre>
-    <div id="extraOutput"></div>
+    
+    <div class="container">
+        <div class="panel">
+            <h2>Estado y Conexión</h2>
+            
+            <div class="api-section">
+                <h3>Estado del Terminal</h3>
+                <button id="getStatus">Obtener Estado</button>
+                <p id="connectionStatus">Estado: <span class="status-indicator status-unknown"></span> <span id="statusText">Desconocido</span></p>
+                <p id="portInfo">Puerto: No conectado</p>
+            </div>
+            
+            <div class="api-section">
+                <h3>Puertos Disponibles</h3>
+                <button id="listPorts">Listar Puertos</button>
+                <div class="input-group" id="portsListContainer" style="display: none;">
+                    <label for="portsList">Seleccione un puerto:</label>
+                    <select id="portsList"></select>
+                    <button id="connectPort" style="margin-top: 10px;">Conectar</button>
+                </div>
+            </div>
+            
+            <div class="api-section">
+                <h3>Administración</h3>
+                <button id="loadKeys">Cargar Llaves</button>
+                <button id="poll">Verificar Conexión</button>
+                <button id="closeTerminal" class="danger">Cierre Diario</button>
+                <button id="disconnect" class="danger">Desconectar</button>
+            </div>
+            
+            <div class="api-section">
+                <h3>Información del POS</h3>
+                <button id="getLastTransaction">Última Transacción</button>
+                <button id="getTotals">Obtener Totales</button>
+                <button id="getSalesDetail">Detalle de Ventas</button>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h2>Transacciones</h2>
+            
+            <div class="api-section">
+                <h3>Realizar Pago</h3>
+                <form id="paymentForm" class="transaction-form">
+                    <div class="input-group">
+                        <label for="amount">Monto:</label>
+                        <input type="number" id="amount" placeholder="Ej: 10000" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="ticket">Ticket/Boleta:</label>
+                        <input type="text" id="ticket" placeholder="Número de ticket" required>
+                    </div>
+                    <button type="submit" class="success">Realizar Pago</button>
+                </form>
+            </div>
+            
+            <div class="api-section">
+                <h3>Reembolso</h3>
+                <form id="refundForm" class="transaction-form">
+                    <div class="input-group">
+                        <label for="originalOperationNumber">Número de Operación:</label>
+                        <input type="text" id="originalOperationNumber" placeholder="Número de operación original" required>
+                    </div>
+                    <button type="submit" class="danger">Realizar Reembolso</button>
+                </form>
+            </div>
+            
+            <div class="api-section">
+                <h3>Estado de Transacción</h3>
+                <button id="getTxStatus">Consultar Estado</button>
+            </div>
+            
+            <h2>Respuesta</h2>
+            <div id="response">Las respuestas de las APIs aparecerán aquí...</div>
+        </div>
+    </div>
 
     <script>
-        function toggleButtons(disabled) {
-            document.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
-        }
-
-        async function fetchData(url) {
-            toggleButtons(true);
-            document.getElementById('output').textContent = 'Cargando...';
-            document.getElementById('extraOutput').innerHTML = '';
-            try {
-                const res = await fetch(url);
-                const data = await res.json();
-                document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-                return data;
-            } catch (err) {
-                document.getElementById('output').textContent = 'Error: ' + err;
-                return null;
-            } finally {
-                toggleButtons(false);
+        const API_BASE_URL = '/api';
+        
+        // Elementos del DOM
+        const responseDiv = document.getElementById('response');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const statusIndicator = connectionStatus.querySelector('.status-indicator');
+        const statusText = document.getElementById('statusText');
+        const portInfo = document.getElementById('portInfo');
+        
+        // Actualizar indicador de estado
+        function updateStatusIndicator(data) {
+            const connected = data?.connected || false;
+            statusIndicator.className = 'status-indicator ' + 
+                (connected ? 'status-connected' : 'status-disconnected');
+            statusText.textContent = connected ? 'Conectado' : 'Desconectado';
+            
+            if (connected && data.port) {
+                portInfo.textContent = `Puerto: ${data.port}`;
+            } else {
+                portInfo.textContent = 'Puerto: No conectado';
             }
         }
-
-        async function fetchPost(url, body = {}) {
-            toggleButtons(true);
-            document.getElementById('output').textContent = 'Cargando...';
-            document.getElementById('extraOutput').innerHTML = '';
+        
+        // Función genérica para llamar a la API
+        async function callApi(endpoint, method = 'GET', body = null) {
             try {
-                const res = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(body)
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                };
+                
+                if (body) {
+                    options.body = JSON.stringify(body);
+                }
+                
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                const data = await response.json();
+                
+                // Mostrar respuesta formateada
+                responseDiv.textContent = JSON.stringify(data, null, 2);
+                
+                // Actualizar estado si es relevante
+                if (endpoint.includes('/terminal/status') || 
+                    endpoint.includes('/terminal/connect') || 
+                    endpoint.includes('/terminal/release-port')) {
+                    updateStatusIndicator(data.data || data);
+                }
+                
+                return data;
+            } catch (error) {
+                responseDiv.textContent = `Error: ${error.message}`;
+                console.error('API Error:', error);
+                return null;
+            }
+        }
+        
+        // Manejadores de eventos
+        document.getElementById('getStatus').addEventListener('click', async () => {
+            await callApi('/terminal/status');
+        });
+        
+        document.getElementById('listPorts').addEventListener('click', async () => {
+            const data = await callApi('/terminal/ports');
+            if (data && data.data) {
+                const portsList = document.getElementById('portsList');
+                portsList.innerHTML = '';
+                data.data.forEach(port => {
+                    const option = document.createElement('option');
+                    option.value = port.path;
+                    option.textContent = port.path;
+                    portsList.appendChild(option);
                 });
-                const data = await res.json();
-                document.getElementById('output').textContent = JSON.stringify(data, null, 2);
-                return data;
-            } catch (err) {
-                document.getElementById('output').textContent = 'Error: ' + err;
-                return null;
-            } finally {
-                toggleButtons(false);
+                document.getElementById('portsListContainer').style.display = 'block';
             }
-        }
-
-        async function connectPort() {
-            const portPath = prompt("Ingresa el puerto (ej: /dev/ttyACM0):");
+        });
+        
+        document.getElementById('connectPort').addEventListener('click', async () => {
+            const portPath = document.getElementById('portsList').value;
             if (portPath) {
-                await fetchPost('/api/connect', { portPath });
+                await callApi('/terminal/connect', 'POST', { portPath });
             }
-        }
-
-        async function venta() {
-            const ticket = prompt("Ingresa el número de ticket (opcional):", "1000");
-            const data = await fetchPost('/api/sale', { amount: 1000, ticket });
-            if (data && data.recovered && data.lastSale) {
-                document.getElementById('extraOutput').innerHTML = `
-                    <div class="warning">
-                        <strong>Se recuperó una posible venta previa</strong><br>
-                        <pre>${JSON.stringify(data.lastSale, null, 2)}</pre>
-                    </div>
-                `;
+        });
+        
+        document.getElementById('loadKeys').addEventListener('click', async () => {
+            await callApi('/terminal/loadKeys', 'POST');
+        });
+        
+        document.getElementById('poll').addEventListener('click', async () => {
+            await callApi('/terminal/poll');
+        });
+        
+        document.getElementById('closeTerminal').addEventListener('click', async () => {
+            if (confirm('¿Está seguro que desea realizar el cierre diario?')) {
+                await callApi('/terminal/cierre-diario', 'POST');
             }
-        }
-
-        async function reverso() {
-            const operationId = prompt("Ingresa el operationId:");
-            if (operationId) {
-                await fetchPost('/api/refund', { operationId });
-            }
-        }
+        });
+        
+        document.getElementById('disconnect').addEventListener('click', async () => {
+            await callApi('/terminal/release-port', 'POST');
+        });
+        
+        document.getElementById('getLastTransaction').addEventListener('click', async () => {
+            await callApi('/terminal/last-transaction');
+        });
+        
+        document.getElementById('getTotals').addEventListener('click', async () => {
+            await callApi('/terminal/getTotals');
+        });
+        
+        document.getElementById('getSalesDetail').addEventListener('click', async () => {
+            await callApi('/terminal/salesDetail');
+        });
+        
+        document.getElementById('getTxStatus').addEventListener('click', async () => {
+            await callApi('/terminal/getTxStatus');
+        });
+        
+        document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const amount = document.getElementById('amount').value;
+            const ticket = document.getElementById('ticket').value;
+            
+            await callApi('/payment', 'POST', {
+                amount,
+                ticketNumber: ticket
+            });
+        });
+        
+        document.getElementById('refundForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const originalOperationNumber = document.getElementById('originalOperationNumber').value;
+            
+            await callApi('/refund', 'POST', {
+                originalOperationNumber
+            });
+        });
+        
+        // Verificar estado al cargar la página
+        window.addEventListener('load', () => {
+            callApi('/terminal/status');
+        });
     </script>
-
 </body>
-
 </html>
-
