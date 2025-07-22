@@ -9,7 +9,7 @@ const CONFIG = {
     RECONNECT_DELAY: 10000
 };
 
-function sleep(ms) {
+async function sleep(ms) {
     return new Promise(function (resolve) {
         setTimeout(resolve, ms);
     });
@@ -124,5 +124,6 @@ async function monitorConnection(callback) {
 module.exports = {
     initializePOS,
     monitorConnection,
-    tryReconnect: findAndConnect
+    tryReconnect: findAndConnect,
+    sleep
 };
