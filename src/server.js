@@ -30,7 +30,7 @@ async function startPOSConnection() {
     if (result.success) {
         console.log(`[POS] ${result.message}`);
 
-        connectionMonitor = posManager.monitorConnection(async () => {
+        connectionMonitor = await posManager.monitorConnection(async () => {
             console.log('[POS] Reconectando...');
             await sleep(5000);
             startPOSConnection();
