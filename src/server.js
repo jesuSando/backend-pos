@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const routes = require("./routes/posRoutes");
 const transbankService = require("./services/transbankService");
-const { initializePOS } = require("./utils/posConnect")
+const posManager = require("./utils/posConnect")
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,12 +25,12 @@ app.listen(PORT, function () {
 let connectionMonitor = null;
 
 async function startPOSConnection() {
-    const result = await initializePOS();
+    const result = await posManager.initializePOS();
 
     if (result.success) {
         console.log(`[POS] ${result.message}`);
 
-        connectionMonitor = monitorConnection(async () => {
+        connectionMonitor = posManager.monitorConnection(async () => {
             console.log('[POS] Reconectando...');
             await sleep(5000);
             startPOSConnection();
