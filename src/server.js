@@ -3,6 +3,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const routes = require("./routes/posRoutes");
 const transbankService = require("./services/transbankService");
+const { initializePOS } = require("./utils/posConnect")
 
 const app = express();
 const PORT = process.env.PORT || 3000;
