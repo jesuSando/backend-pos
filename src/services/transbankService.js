@@ -6,6 +6,34 @@ class TransbankService {
         this.pos = new POSAutoservicio();
         this.connectedPort = null;
         this.pos.setDebug(false);
+        this.operationQueue = [];
+        this.isProcessing = false;
+    }
+
+    async enqueueOperation(operation) {
+        return new Promise((resolve, reject) => {
+            this.operationQueue.push({ operation, resolve, reject });
+            if (!this.isProcessing) this.processQueue();
+        });
+    }
+
+    async processQueue() {
+        if (this.operationQueue.length === 0 || !this.deviceConnected) {
+            this.isProcessing = false;
+            return;
+        }
+
+        this.isProcessing = true;
+        const { operation, resolve, reject } = this.operationQueue.shift();
+
+        try {
+            const result = await operation();
+            resolve(result);
+        } catch (error) {
+            reject(error);
+        } finally {
+            this.processQueue();
+        }
     }
 
     get deviceConnected() {
@@ -21,13 +49,13 @@ class TransbankService {
             if (!this.deviceConnected || !this.pos.isConnected()) {
                 return false;
             }
-    
+
             const result = await this.pos.poll();
-    
+
             if (result === undefined) {
                 throw new Error('Respuesta indefinida del POS');
             }
-    
+
             return true;
         } catch (e) {
             console.error('[POS] Error en isAlive:', e.message || e);
@@ -40,7 +68,7 @@ class TransbankService {
             return true;
         }
     }
-    
+
 
     async listAvailablePorts() {
         try {
@@ -156,7 +184,12 @@ class TransbankService {
         }
     }
 
+
     async sale(amount, ticket, sendStatus = false, callback = null) {
+        return this.enqueueOperation(() => this._sale(amount, ticket, sendStatus, callback));
+    }
+    
+    async _sale(amount, ticket, sendStatus = false, callback = null) {
         try {
             if (!this.connectedPort) {
                 throw new Error('POS no conectado');

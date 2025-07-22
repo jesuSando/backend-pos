@@ -48,52 +48,72 @@ async function tryConnectToPort(portPath) {
 }
 
 let isReconnecting = false;
+let connectionLock = false;
+let pendingOperations = [];
 
 async function findAndConnect() {
-    if (isReconnecting) {
-        console.log('[POS] Ya hay un proceso de reconexión en curso');
-        return { success: false, reason: 'Reconnection already in progress' };
+    if (connectionLock) {
+        console.log('[POS] Operación de conexión en curso, esperando...');
+        return { success: false, reason: 'Connection operation in progress' };
     }
 
-    isReconnecting = true;
+    connectionLock = true;
+
     try {
-        console.log('[POS] Buscando puertos disponibles...');
-        var ports = await transbankService.listAvailablePorts();
-        var acmPorts = ports.filter(function (p) {
-            return p.path && p.path.indexOf('ACM') !== -1;
-        });
-
-        if (acmPorts.length === 0) {
-            console.log('[POS] No se encontraron puertos ACM disponibles');
-            return { success: false, reason: 'No ACM ports found' };
+        if (isReconnecting) {
+            console.log('[POS] Ya hay un proceso de reconexión en curso');
+            return { success: false, reason: 'Reconnection already in progress' };
         }
 
-        console.log('[POS] Puertos detectados:', acmPorts.map(p => p.path).join(', '));
+        isReconnecting = true;
+        
+        try {
+            console.log('[POS] Buscando puertos disponibles...');
+            var ports = await transbankService.listAvailablePorts();
+            var acmPorts = ports.filter(function (p) {
+                return p.path && p.path.indexOf('ACM') !== -1;
+            });
 
-        for (const port of acmPorts) {
-            const connected = await tryConnectToPort(port.path);
-            if (connected) {
-                const keysLoaded = await tryLoadKeys();
-                isReconnecting = false;
-                return {
-                    success: true,
-                    port: port.path,
-                    keysLoaded,
-                    message: keysLoaded ? 'POS listo para operar' : 'POS conectado pero sin llaves'
-                };
+            if (acmPorts.length === 0) {
+                console.log('[POS] No se encontraron puertos ACM disponibles');
+                return { success: false, reason: 'No ACM ports found' };
             }
-        }
 
-        return { success: false, reason: 'All connection attempts failed' };
-    } catch (error) {
-        console.error('[POS] Error en búsqueda de puertos:', error.message);
-        return { success: false, reason: error.message };
+            console.log('[POS] Puertos detectados:', acmPorts.map(p => p.path).join(', '));
+
+            for (const port of acmPorts) {
+                const connected = await tryConnectToPort(port.path);
+                if (connected) {
+                    const keysLoaded = await tryLoadKeys();
+                    isReconnecting = false;
+                    return {
+                        success: true,
+                        port: port.path,
+                        keysLoaded,
+                        message: keysLoaded ? 'POS listo para operar' : 'POS conectado pero sin llaves'
+                    };
+                }
+            }
+
+            return { success: false, reason: 'All connection attempts failed' };
+        } catch (error) {
+            console.error('[POS] Error en búsqueda de puertos:', error.message);
+            return { success: false, reason: error.message };
+        } finally {
+            isReconnecting = false;
+        }
     } finally {
+        connectionLock = false;
         isReconnecting = false;
     }
+
 }
 
 async function initializePOS() {
+    if (connectionLock) {
+        return { success: false, reason: 'Initialization already in progress' };
+    }
+
     try {
         console.log('[POS] Iniciando conexión...');
         await transbankService.closeConnection();
