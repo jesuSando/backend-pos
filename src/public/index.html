@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Tester POS Transbank</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+        }
+
+        button {
+            margin: 6px;
+            padding: 10px 16px;
+            cursor: pointer;
+        }
+
+        pre {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .warning {
+            background: #fff3cd;
+            border-left: 6px solid #ffc107;
+            padding: 10px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Tester POS Transbank</h1>
+
+    <button onclick="fetchData('/api/status')">Estado</button>
+    <button onclick="fetchData('/api/ports')">Listar Puertos</button>
+    <button onclick="connectPort()">Conectar Puerto</button>
+    <button onclick="fetchPost('/api/disconnect')">Desconectar</button>
+    <button onclick="fetchPost('/api/loadKeys')">Cargar Llaves</button>
+    <button onclick="fetchData('/api/poll')">Poll</button>
+    <button onclick="venta()">Venta ($1000)</button>
+    <button onclick="reverso()">Reversar Última</button>
+    <button onclick="fetchData('/api/last-sale')">Última Venta</button>
+    <button onclick="fetchPost('/api/close-day')">Cierre de Día</button>
+
+    <hr>
+
+    <h3>Resultado:</h3>
+    <pre id="output">Presiona un botón para ver la respuesta...</pre>
+    <div id="extraOutput"></div>
+
+    <script>
+        function toggleButtons(disabled) {
+            document.querySelectorAll('button').forEach(btn => btn.disabled = disabled);
+        }
+
+        async function fetchData(url) {
+            toggleButtons(true);
+            document.getElementById('output').textContent = 'Cargando...';
+            document.getElementById('extraOutput').innerHTML = '';
+            try {
+                const res = await fetch(url);
+                const data = await res.json();
+                document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+                return data;
+            } catch (err) {
+                document.getElementById('output').textContent = 'Error: ' + err;
+                return null;
+            } finally {
+                toggleButtons(false);
+            }
+        }
+
+        async function fetchPost(url, body = {}) {
+            toggleButtons(true);
+            document.getElementById('output').textContent = 'Cargando...';
+            document.getElementById('extraOutput').innerHTML = '';
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                document.getElementById('output').textContent = JSON.stringify(data, null, 2);
+                return data;
+            } catch (err) {
+                document.getElementById('output').textContent = 'Error: ' + err;
+                return null;
+            } finally {
+                toggleButtons(false);
+            }
+        }
+
+        async function connectPort() {
+            const portPath = prompt("Ingresa el puerto (ej: /dev/ttyACM0):");
+            if (portPath) {
+                await fetchPost('/api/connect', { portPath });
+            }
+        }
+
+        async function venta() {
+            const ticket = prompt("Ingresa el número de ticket (opcional):", "1000");
+            const data = await fetchPost('/api/sale', { amount: 1000, ticket });
+            if (data && data.recovered && data.lastSale) {
+                document.getElementById('extraOutput').innerHTML = `
+                    <div class="warning">
+                        <strong>Se recuperó una posible venta previa</strong><br>
+                        <pre>${JSON.stringify(data.lastSale, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        async function reverso() {
+            const operationId = prompt("Ingresa el operationId:");
+            if (operationId) {
+                await fetchPost('/api/refund', { operationId });
+            }
+        }
+    </script>
+
+</body>
+
+</html>
+
