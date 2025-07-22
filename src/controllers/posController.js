@@ -21,7 +21,9 @@ const POSController = {
   listPorts: async (req, res) => {
     try {
       const ports = await transbankService.listAvailablePorts();
-      const filteredPorts = ports.filter(port => port.path?.includes('ACM'));
+      const filteredPorts = ports.filter(function(port) {
+        return port.path && port.path.includes('ACM');
+      });
 
       return responseHandler.success(res, 'Puertos disponibles', filteredPorts);
     } catch (error) {
