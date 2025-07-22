@@ -7,7 +7,7 @@ const POSController = {
     try {
       const status = {
         connected: transbankService.deviceConnected,
-        port: transbankService.connection?.path || null,
+        port: transbankService.connection && transbankService.connection.path || null,
         status: transbankService.deviceConnected ? 'Conectado' : 'Desconectado'
       };
 
@@ -77,13 +77,13 @@ const POSController = {
       try {
         await transbankService.loadKey();
         return responseHandler.success(res, 'Autoconectado y llaves cargadas', {
-          port: transbankService.connection?.path || null,
+          port: transbankService.connection && transbankService.connection.path || null,
           keysLoaded: true
         });
       } catch (keyError) {
         console.warn('Autoconectado pero no se cargaron llaves:', keyError);
         return responseHandler.success(res, 'Autoconectado pero no se cargaron las llaves', {
-          port: transbankService.connection?.path || null,
+          port: transbankService.connection && transbankService.connection.path || null,
           keysLoaded: false,
           warning: keyError.message
         });

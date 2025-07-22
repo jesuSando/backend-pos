@@ -16,7 +16,7 @@ const PaymentController = {
             }
 
             const response = await transbankService.sale(amount, ticketNumber);
-            const data = response.data;
+            const data = response && response.data || {};
 
             // Formatear respuesta
             const formattedResponse = {
@@ -69,7 +69,7 @@ const PaymentController = {
             }
 
             const response = await transbankService.refund(originalOperationNumber);
-            const data = response.data;
+            const data = response && response.data || {};
 
             // Formatear respuesta
             const formattedResponse = {
