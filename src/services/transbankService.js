@@ -109,7 +109,10 @@ class TransbankService {
     async autoConnect() {
         try {
             const response = await this.pos.autoconnect();
-            this.connectedPort = Object.assign({ path: portPath }, response);
+            if (!response || !response.portName) {
+                throw new Error('No se pudo obtener portName');
+            }
+            this.connectedPort = Object.assign({ path: response.portName }, response);
             return true;
         } catch (err) {
             console.error('Ocurrió un error al autoconectar con el POS:', err.message);
@@ -188,7 +191,7 @@ class TransbankService {
     async sale(amount, ticket, sendStatus = false, callback = null) {
         return this.enqueueOperation(() => this._sale(amount, ticket, sendStatus, callback));
     }
-    
+
     async _sale(amount, ticket, sendStatus = false, callback = null) {
         try {
             if (!this.connectedPort) {
@@ -207,7 +210,9 @@ class TransbankService {
             return {
                 success: false,
                 error: error.message,
-                shouldReconnect: error.message.includes('desconectado')
+                shouldReconnect:
+                    typeof error.message === 'string' &&
+                    error.message.includes('desconectado')
             };
         }
     }
