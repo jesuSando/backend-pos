@@ -47,12 +47,20 @@ async function tryConnectToPort(portPath) {
     return false;
 }
 
+let isReconnecting = false;
+
 async function findAndConnect() {
+    if (isReconnecting) {
+        console.log('[POS] Ya hay un proceso de reconexión en curso');
+        return { success: false, reason: 'Reconnection already in progress' };
+    }
+
+    isReconnecting = true;
     try {
         console.log('[POS] Buscando puertos disponibles...');
         var ports = await transbankService.listAvailablePorts();
-        var acmPorts = ports.filter(function(p) {
-          return p.path && p.path.indexOf('ACM') !== -1;
+        var acmPorts = ports.filter(function (p) {
+            return p.path && p.path.indexOf('ACM') !== -1;
         });
 
         if (acmPorts.length === 0) {
@@ -66,6 +74,7 @@ async function findAndConnect() {
             const connected = await tryConnectToPort(port.path);
             if (connected) {
                 const keysLoaded = await tryLoadKeys();
+                isReconnecting = false;
                 return {
                     success: true,
                     port: port.path,
@@ -79,6 +88,8 @@ async function findAndConnect() {
     } catch (error) {
         console.error('[POS] Error en búsqueda de puertos:', error.message);
         return { success: false, reason: error.message };
+    } finally {
+        isReconnecting = false;
     }
 }
 
@@ -96,6 +107,7 @@ async function initializePOS() {
 async function monitorConnection(callback) {
     let monitorActive = false;
     let monitorInterval = null;
+    let isChecking = false;
 
     return {
         start: () => {
@@ -103,14 +115,20 @@ async function monitorConnection(callback) {
             monitorActive = true;
 
             monitorInterval = setInterval(async () => {
+                if (isChecking) return;
+                isChecking = true;
+
                 try {
                     const isAlive = await transbankService.isAlive();
                     if (!isAlive) {
                         console.log('[POS] Desconexión detectada');
+                        await sleep(CONFIG.RECONNECT_DELAY);
                         callback();
                     }
                 } catch (error) {
                     console.error('[POS] Error en monitoreo:', error.message);
+                } finally {
+                    isChecking = false;
                 }
             }, CONFIG.MONITOR_INTERVAL);
         },

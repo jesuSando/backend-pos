@@ -18,11 +18,15 @@ class TransbankService {
 
     async isAlive() {
         if (!this.connectedPort) return false;
-
+    
         try {
-            return await this.pos.poll();
+            const result = await this.pos.poll();
+            if (result === undefined) {
+                throw new Error('Respuesta indefinida del POS');
+            }
+            return result;
         } catch (e) {
-            console.error("Error verificando estado del POS:", e.message);
+            console.error("Error verificando estado del POS:", e.message || 'Error desconocido');
             return false;
         }
     }
@@ -51,10 +55,13 @@ class TransbankService {
     async connectToPort(portPath) {
         try {
             const response = await this.pos.connect(portPath);
+            if (!response) {
+                throw new Error('Respuesta indefinida al conectar');
+            }
             this.connectedPort = Object.assign({ path: portPath }, response);
-            return response;
+            return true;
         } catch (err) {
-            console.error('Ocurrió un error al conectar con el POS:', err.message);
+            console.error('Ocurrió un error al conectar con el POS:', err.message || 'Error desconocido');
             this.connectedPort = null;
             return false;
         }
