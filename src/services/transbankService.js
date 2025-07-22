@@ -18,16 +18,20 @@ class TransbankService {
 
     async isAlive() {
         if (!this.connectedPort) return false;
-    
+
         try {
             const result = await this.pos.poll();
             if (result === undefined) {
                 throw new Error('Respuesta indefinida del POS');
             }
-            return result;
+            return true;
         } catch (e) {
-            console.error("Error verificando estado del POS:", e.message || 'Error desconocido');
-            return false;
+            console.error("Error verificando estado del POS:", e.message || 'Error en comunicación con POS');
+
+            if (e.message.includes('desconectado') || e.message.includes('no conectado')) {
+                return false;
+            }
+            return true;
         }
     }
 
@@ -147,11 +151,24 @@ class TransbankService {
 
     async sale(amount, ticket, sendStatus = false, callback = null) {
         try {
+            if (!this.connectedPort) {
+                throw new Error('POS no conectado');
+            }
+
             const response = await this.pos.sale(amount, ticket, sendStatus, callback);
+
+            if (!response || typeof response !== 'object') {
+                throw new Error('Respuesta inválida del POS');
+            }
+
             return { success: true, data: response };
         } catch (error) {
             console.error("Error procesando venta:", error.message);
-            throw error;
+            return {
+                success: false,
+                error: error.message,
+                shouldReconnect: error.message.includes('desconectado')
+            };
         }
     }
 
