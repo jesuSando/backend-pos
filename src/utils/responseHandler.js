@@ -11,11 +11,13 @@ const responseHandler = {
         const response = {
             success: false,
             error: message,
-            code
+            code,
+            responseCode: code // Mantener compatibilidad con el viejo sistema
         };
 
-        if (process.env.NODE_ENV === 'development' && Object.keys(meta).length > 0) {
-            response.meta = meta;
+        // Solo mostrar stack en desarrollo
+        if (process.env.NODE_ENV === 'development') {
+            response.stack = meta.stack;
         }
 
         res.status(status).json(response);

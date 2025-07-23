@@ -1,4 +1,6 @@
 const express = require('express');
+const https = require('https');
+const fs = require('fs');
 const bodyParser = require('body-parser');
 const path = require('path');
 const routes = require("./routes/posRoutes");
@@ -18,10 +20,16 @@ app.get('/', function (req, res) {
     res.sendFile(path.join(__dirname, 'public/index.html'));
 });
 
-app.listen(PORT, function () {
+const sslOptions = {
+    key: fs.readFileSync(path.join(__dirname, '../certs/server.key')),
+    cert: fs.readFileSync(path.join(__dirname, '../certs/server.crt')),
+};
+
+https.createServer(sslOptions, app).listen(PORT, function () {
     console.log('');
-    console.log('[SERVER]   Servidor corriendo en http://localhost:' + PORT);
+    console.log('[SERVER]   Servidor corriendo en https://localhost:' + PORT);
 });
+
 
 let connectionMonitor = null;
 
@@ -50,7 +58,7 @@ async function startPOSConnection() {
             connectionMonitor.resume();
         }
     } else {
-        console.error(`[POS]        Error: ${result.reason}`);
+        console.error(`[POS]      Error: ${result.reason}`);
         console.log('[POS]      Reintentando en 10 segundos...');
         setTimeout(startPOSConnection, 10000);
     }
@@ -61,6 +69,7 @@ setTimeout(startPOSConnection, 10000);
 // Manejo de cierre
 process.on('SIGINT', async () => {
     if (connectionMonitor) connectionMonitor.stop();
+    console.log('');
     await transbankService.closeConnection();
     process.exit(0);
 });

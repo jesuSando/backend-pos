@@ -21,13 +21,15 @@ const PaymentController = {
             // Formatear respuesta
             const formattedResponse = {
                 approved: data.successful,
-                operationId: data.operationNumber,
+                responseCode: data.responseCode === 0 ? '00' : 'UNKNOWN',
+                operationNumber: data.operationNumber, // Mantener este nombre
                 amount: data.amount,
                 cardNumber: data.last4Digits ? `••••${data.last4Digits}` : null,
                 authorizationCode: data.authorizationCode,
-                timestamp: new Date().toISOString(),
+                timestamp: data.realDate && data.realTime ? `${data.realDate} ${data.realTime}` : null,
                 cardType: data.cardType,
-                cardBrand: data.cardBrand
+                cardBrand: data.cardBrand,
+                rawData: data // Mantener todos los datos originales
             };
 
             return responseHandler.success(res, 'Pago procesado', formattedResponse);
