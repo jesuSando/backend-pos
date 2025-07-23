@@ -35,7 +35,7 @@ class TransbankService {
         } catch (error) {
             reject(error);
         } finally {
-            setTimeout(() => this.processQueue(), 0); 
+            setTimeout(() => this.processQueue(), 0);
         }
     }
 
@@ -48,26 +48,19 @@ class TransbankService {
     }
 
     async isAlive() {
-        if (!this.deviceConnected || !this.pos.isConnected()) return false;
-
-        if (this.inTransaction) return true;
-
-        try {
-            await this.pos.status();
-            return true;
-        } catch (e) {
-            console.error('[POS] Error comprobando conexión:', e.message);
-            return false;
-        }
+        return {
+            deviceConnected: this.deviceConnected,
+            connection: this.connection
+        };
     }
 
     async listAvailablePorts() {
         try {
             const ports = await this.pos.listPorts();
-            console.log("Puertos encontrados exitosamente");
+            console.log("[SERVICE]  Puertos encontrados exitosamente");
             return ports;
         } catch (err) {
-            console.log('Ocurrió un error listando los puertos, ', err.message);
+            console.log('[SERVICE]  Ocurrió un error listando los puertos, ', err.message);
             return [];
         }
     }
@@ -77,7 +70,7 @@ class TransbankService {
             await this.pos.loadKeys();
             return { success: true, message: 'Llaves cargadas correctamente' };
         } catch (error) {
-            console.log("Error al cargar llaves:", error)
+            console.log("[SERVICE]  Error al cargar llaves:", error)
             throw error;
         }
     }
@@ -91,7 +84,7 @@ class TransbankService {
             this.connectedPort = Object.assign({ path: portPath }, response);
             return true;
         } catch (err) {
-            console.error('Ocurrió un error al conectar con el POS:', err.message || 'Error desconocido');
+            console.error('[SERVICE]  Ocurrió un error al conectar con el POS:', err.message || 'Error desconocido');
             this.connectedPort = null;
             return false;
         }
@@ -106,7 +99,7 @@ class TransbankService {
             this.connectedPort = Object.assign({ path: response.portName }, response);
             return true;
         } catch (err) {
-            console.error('Ocurrió un error al autoconectar con el POS:', err.message);
+            console.error('[SERVICE]  Ocurrió un error al autoconectar con el POS:', err.message);
             this.connectedPort = null;
             return false;
         }
@@ -114,17 +107,17 @@ class TransbankService {
 
     async closeConnection() {
         if (!this.connectedPort) {
-            console.log("No hay conexión activa para cerrar");
+            console.log("[SERVICE]  No hay conexión activa para cerrar");
             return false;
         }
 
         try {
             await this.pos.disconnect();
-            console.log('Conexión con POS cerrada correctamente');
+            console.log('[SERVICE]  Conexión con POS cerrada correctamente');
             this.connectedPort = null;
             return true;
         } catch (error) {
-            console.log('Error al cerrar conexión con POS:', error.message);
+            console.log('[SERVICE]  Error al cerrar conexión con POS:', error.message);
         }
     }
 
@@ -133,7 +126,7 @@ class TransbankService {
             const response = await this.pos.closeDay();
             return { success: true, data: response };
         } catch (error) {
-            console.error("Error cerrando día:", error.message);
+            console.error("[SERVICE]  Error cerrando día:", error.message);
             throw error;
         }
     }
@@ -143,7 +136,7 @@ class TransbankService {
             const response = await this.pos.getLastSale();
             return { success: true, data: response };
         } catch (error) {
-            console.error("Error obteniendo última venta:", error.message);
+            console.error("[SERVICE]  Error obteniendo última venta:", error.message);
             throw error;
         }
     }
@@ -153,7 +146,7 @@ class TransbankService {
             const response = await this.pos.getTotals();
             return { success: true, data: response };
         } catch (error) {
-            console.error("Error obteniendo totales:", error.message);
+            console.error("[SERVICE]  Error obteniendo totales:", error.message);
             throw error;
         }
     }
@@ -163,7 +156,7 @@ class TransbankService {
             const response = await this.pos.salesDetail(printOnPos);
             return { success: true, data: response };
         } catch (error) {
-            console.error("Error obteniendo detalle de ventas:", error.message);
+            console.error("[SERVICE]  Error obteniendo detalle de ventas:", error.message);
             throw error;
         }
     }
@@ -173,7 +166,7 @@ class TransbankService {
             const response = await this.pos.refund(operationId);
             return { success: true, data: response };
         } catch (error) {
-            console.error("Error realizando reversa:", error.message);
+            console.error("[SERVICE]  Error realizando reversa:", error.message);
             throw error;
         }
     }
@@ -198,7 +191,8 @@ class TransbankService {
 
             return { success: true, data: response };
         } catch (error) {
-            console.error("Error procesando venta:", error.message);
+            console.error("[SERVICE]  Error procesando venta:", error.message);
+            
             return {
                 success: false,
                 error: error.message,
@@ -216,17 +210,17 @@ class TransbankService {
             const response = await this.pos.send(payload, waitResponse, callback);
             return { success: true, data: response };
         } catch (error) {
-            console.error("Error enviando comando:", error.message);
+            console.error("[SERVICE]  Error enviando comando:", error.message);
             throw error;
         }
     }
 
     async getTxStatus() {
         try {
-            const response = await this.pos.getTxStatus();
+            const response = await this.pos.poll();
             return { success: true, data: response };
         } catch (error) {
-            console.error("Error obteniendo estado de transacción:", error.message);
+            console.error("[SERVICE]  Error ejecutando poll:", error.message);
             throw error;
         }
     }

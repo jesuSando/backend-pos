@@ -32,7 +32,7 @@ const PaymentController = {
 
             return responseHandler.success(res, 'Pago procesado', formattedResponse);
         } catch (error) {
-            console.error('Error procesando pago:', error);
+            console.error('[CONTROLLER] Error procesando pago:', error);
 
             // Manejo especial de errores conocidos
             const message = (error.message || '').toLowerCase();
@@ -83,7 +83,7 @@ const PaymentController = {
 
             return responseHandler.success(res, 'Reversa exitosa', formattedResponse);
         } catch (error) {
-            console.error('Error procesando reversa:', error);
+            console.error('[CONTROLLER] Error procesando reversa:', error);
             return responseHandler.error(res, error.message, 500, error.responseCode || 'REFUND_ERROR', {
                 detail: error.message
             });
@@ -95,7 +95,7 @@ const PaymentController = {
             const response = await transbankService.getTxStatus();
             return responseHandler.success(res, 'Estado de transacción', response.data);
         } catch (error) {
-            console.error('Error obteniendo estado de transacción:', error);
+            console.error('[CONTROLLER] Error obteniendo estado de transacción:', error);
             return responseHandler.error(res, error.message, 500, 'TX_STATUS_ERROR');
         }
     }

@@ -13,7 +13,7 @@ const POSController = {
 
       return responseHandler.success(res, 'Estado de conexión', status);
     } catch (error) {
-      console.error('Error obteniendo estado del POS:', error);
+      console.error('[CONTROLLER] Error obteniendo estado del POS:', error);
       return responseHandler.error(res, 'Error al obtener estado', 500, 'STATUS_ERROR');
     }
   },
@@ -27,7 +27,7 @@ const POSController = {
 
       return responseHandler.success(res, 'Puertos disponibles', filteredPorts);
     } catch (error) {
-      console.error('Error listando puertos:', error);
+      console.error('[CONTROLLER] Error listando puertos:', error);
       return responseHandler.error(res, 'Error al listar puertos', 500, 'PORT_LIST_ERROR', {
         detail: error.message
       });
@@ -55,7 +55,7 @@ const POSController = {
           keysLoaded: true
         });
       } catch (keyError) {
-        console.warn('Conectado pero no se cargaron llaves:', keyError);
+        console.warn('[CONTROLLER]  Conectado pero no se cargaron llaves:', keyError);
         return responseHandler.success(res, 'Conectado al puerto pero no se cargaron las llaves', {
           port: portPath,
           keysLoaded: false,
@@ -63,7 +63,7 @@ const POSController = {
         });
       }
     } catch (error) {
-      console.error('Error conectando al puerto:', error);
+      console.error('[CONTROLLER] Error conectando al puerto:', error);
       return responseHandler.error(res, error.message, 500, 'CONNECTION_ERROR');
     }
   },
@@ -83,7 +83,7 @@ const POSController = {
           keysLoaded: true
         });
       } catch (keyError) {
-        console.warn('Autoconectado pero no se cargaron llaves:', keyError);
+        console.warn('[CONTROLLER]  Autoconectado pero no se cargaron llaves:', keyError);
         return responseHandler.success(res, 'Autoconectado pero no se cargaron las llaves', {
           port: transbankService.connection && transbankService.connection.path || null,
           keysLoaded: false,
@@ -91,7 +91,7 @@ const POSController = {
         });
       }
     } catch (error) {
-      console.error('Error en autoconexión:', error);
+      console.error('[CONTROLLER] Error en autoconexión:', error);
       return responseHandler.error(res, error.message, 500, 'AUTOCONNECT_ERROR');
     }
   },
@@ -104,7 +104,7 @@ const POSController = {
       }
       return responseHandler.success(res, 'Desconectado del POS correctamente');
     } catch (error) {
-      console.error('Error desconectando:', error);
+      console.error('[CONTROLLER] Error desconectando:', error);
       return responseHandler.error(res, error.message, 500, 'DISCONNECT_ERROR');
     }
   },
@@ -114,7 +114,7 @@ const POSController = {
       const result = await transbankService.loadKey();
       return responseHandler.success(res, result.message || 'Llaves cargadas correctamente', result);
     } catch (error) {
-      console.error('Error cargando llaves:', error);
+      console.error('[CONTROLLER] Error cargando llaves:', error);
       return responseHandler.error(res, error.message, 500, 'LOAD_KEYS_ERROR', {
         detail: error.message
       });
@@ -123,13 +123,14 @@ const POSController = {
 
   poll: async (req, res) => {
     try {
-      const alive = await transbankService.isAlive();
+      const { deviceConnected, connection } = await transbankService.isAlive();
+
       return responseHandler.success(res, 'Estado del POS', {
-        alive,
-        port: transbankService.connection && transbankService.connection.path
+        alive: deviceConnected,
+        port: connection && connection.path ? connection.path : null
       });
     } catch (error) {
-      console.error('Error en poll:', error);
+      console.error('[CONTROLLER] Error en poll:', error);
       return responseHandler.error(res, error.message, 500, 'POLL_ERROR');
     }
   },
@@ -139,7 +140,7 @@ const POSController = {
       const response = await transbankService.closeDay();
       return responseHandler.success(res, 'Cierre de día ejecutado', response.data);
     } catch (error) {
-      console.error('Error en cierre de día:', error);
+      console.error('[CONTROLLER] Error en cierre de día:', error);
       return responseHandler.error(res, error.message, 500, 'CLOSE_DAY_ERROR', {
         detail: error.message
       });
@@ -164,7 +165,7 @@ const POSController = {
 
       return responseHandler.success(res, 'Última transacción obtenida', formattedResponse);
     } catch (error) {
-      console.error('Error obteniendo última transacción:', error);
+      console.error('[CONTROLLER] Error obteniendo última transacción:', error);
       return responseHandler.error(res, 'Error al obtener la transacción', 500, 'LAST_TXN_FAILED', {
         detail: error.message,
         stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -177,7 +178,7 @@ const POSController = {
       const response = await transbankService.getTotals();
       return responseHandler.success(res, 'Totales obtenidos', response.data);
     } catch (error) {
-      console.error('Error obteniendo totales:', error);
+      console.error('[CONTROLLER] Error obteniendo totales:', error);
       return responseHandler.error(res, error.message, 500, 'GET_TOTALS_ERROR');
     }
   },
@@ -188,7 +189,7 @@ const POSController = {
       const response = await transbankService.salesDetail(printOnPos);
       return responseHandler.success(res, 'Detalle de ventas obtenido', response.data);
     } catch (error) {
-      console.error('Error obteniendo detalle de ventas:', error);
+      console.error('[CONTROLLER] Error obteniendo detalle de ventas:', error);
       return responseHandler.error(res, error.message, 500, 'SALES_DETAIL_ERROR');
     }
   }

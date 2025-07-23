@@ -19,27 +19,39 @@ app.get('/', function (req, res) {
 });
 
 app.listen(PORT, function () {
-    console.log('Servidor corriendo en http://localhost:' + PORT);
+    console.log('');
+    console.log('[SERVER]   Servidor corriendo en http://localhost:' + PORT);
 });
 
 let connectionMonitor = null;
 
 async function startPOSConnection() {
+
+    if (connectionMonitor) connectionMonitor.pause();
+
     const result = await posManager.initializePOS();
 
     if (result.success) {
-        console.log(`[POS] ${result.message}`);
-
-        connectionMonitor = await posManager.monitorConnection(async () => {
-            console.log('[POS] Reconectando...');
-            await posManager.sleep(5000);
-            startPOSConnection();
-        });
-
-        connectionMonitor.start();
+        console.log(`[POS]      ${result.message}`);
+        console.log('');
+        console.log('---------------------------------------------')
+        console.log('');
+        if (!connectionMonitor) {
+            connectionMonitor = await posManager.monitorConnection(async () => {
+                console.log('[POS]      Intentando reconectar...');
+                await transbankService.closeConnection();
+                if (connectionMonitor) connectionMonitor.pause();
+                await posManager.sleep(5000);
+                await startPOSConnection();
+                if (connectionMonitor) connectionMonitor.resume();
+            });
+            connectionMonitor.start();
+        } else {
+            connectionMonitor.resume();
+        }
     } else {
-        console.error(`[POS] Error: ${result.reason}`);
-        console.log('[POS] Reintentando en 10 segundos...');
+        console.error(`[POS]        Error: ${result.reason}`);
+        console.log('[POS]      Reintentando en 10 segundos...');
         setTimeout(startPOSConnection, 10000);
     }
 }
