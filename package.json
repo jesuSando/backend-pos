@@ -15,6 +15,7 @@
     "cors": "2.8.5",
     "express": "4.21.2",
     "serialport": "9.2.8",
-    "transbank-pos-sdk": "3.0.1"
+    "transbank-pos-sdk": "3.0.1",
+    "dotenv": "16.6.1"
   }
 }
