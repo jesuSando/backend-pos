@@ -1,7 +1,7 @@
 # Integración Transbank POS
 Este backend permite conectar y controlar un dispositivo `POS Transbank` en modo autoservicio, adaptado para hardware antiguo (Debian 8 y Node.js 10). Está diseñado para ejecutar operaciones como ventas, reversiones y monitoreo de estado del POS, garantizando reconexión automática y evitando bloqueos por operaciones simultáneas.
 
-### Características principales
+## Características principales
  - Conexión automática al POS vía puerto serial `(/dev/ttyACM*)`
  - Carga de llaves para operar
  - Monitoreo periódico de estado con `poll()`
@@ -10,7 +10,7 @@ Este backend permite conectar y controlar un dispositivo `POS Transbank` en modo
  - APIs REST para consumo por parte de un frontend u otros sistemas
  - Compatible con entorno `Node.js 10` y `Debian 8`
 
-### Estructura del proyecto
+## Estructura del proyecto
 ```
 .
 └── BACKEND-POS/
@@ -39,7 +39,7 @@ Este backend permite conectar y controlar un dispositivo `POS Transbank` en modo
     ├── package-lock.json
     └── package.json   
 ```
-### Descripción de archivos principales
+## Descripción de archivos principales
 | Ubicación | Nombre | Función |
 | ------ | ------ | ------ |
 | src/config/ | posConfig.js | Contiene la configuración base del sistema (reintentos, tiempos) |
@@ -54,3 +54,21 @@ Este backend permite conectar y controlar un dispositivo `POS Transbank` en modo
 | certs/ | server.crt | Certificado SSL para HTTPS | 
 | certs/ | server.key | Llave privada SSL para HTTPS | 
 | .env	| .env	| Variables de entorno para configuración segura |
+
+## Cómo iniciar el servidor
+### Instalar dependencias
+```
+npm install
+```
+### (Opcional) Crear archivo .env con variables personalizadas
+
+### Iniciar el servidor
+```
+node src/server.js
+```
+
+## Requisitos
+- Node.js 10.x
+- Sistema operativo compatible con dispositivos USB Serial `(ej: /dev/ttyACM0)`
+- SDK POS Transbank en modo autoservicio
+- Dispositivo POS Transbank conectado por USB
